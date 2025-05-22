@@ -333,59 +333,64 @@ function getDirectMintInfoFromPolygonscan(nftId) {
 
   console.log(`Searching mint info for NFT ID: ${nftId}`);
 
-  // Use tokennfttx API with Genso's address and pagination
-  const url = `https://api.polygonscan.com/api?module=account&action=tokennfttx&contractaddress=${contractAddress}&address=${gensoCreateNftAddress}&page=1&offset=10000&sort=desc&apikey=${apiKey}`;
+  // Use cached transactions if available
+  if (!getDirectMintInfoFromPolygonscan.cachedTransactions) {
+    // Use tokennfttx API with Genso's address and pagination
+    const url = `https://api.polygonscan.com/api?module=account&action=tokennfttx&contractaddress=${contractAddress}&address=${gensoCreateNftAddress}&page=1&offset=10000&sort=desc&apikey=${apiKey}`;
 
-  try {
-    const response = UrlFetchApp.fetch(url);
-    const data = JSON.parse(response.getContentText());
+    try {
+      const response = UrlFetchApp.fetch(url);
+      const data = JSON.parse(response.getContentText());
 
-    console.log(`API Response status: ${data.status}`);
-    console.log(`API Response message: ${data.message}`);
+      console.log(`API Response status: ${data.status}`);
+      console.log(`API Response message: ${data.message}`);
 
-    if (data.status === "1" && data.result && data.result.length > 0) {
-      console.log(`Number of transactions found: ${data.result.length}`);
-
-      // Filter transactions for the specific tokenId
-      const tokenTransactions = data.result.filter(tx => tx.tokenID === nftId);
-      console.log(`Number of transactions for tokenId ${nftId}: ${tokenTransactions.length}`);
-
-      if (tokenTransactions.length > 0) {
-        console.log(`First transaction for tokenId ${nftId}:`, JSON.stringify(tokenTransactions[0], null, 2));
+      if (data.status === "1" && data.result && data.result.length > 0) {
+        console.log(`Number of transactions found: ${data.result.length}`);
+        // Cache the transactions
+        getDirectMintInfoFromPolygonscan.cachedTransactions = data.result;
+      } else {
+        console.log("No transactions found in API response");
+        return { mint_date: "", initiator_address: "" };
       }
-
-      // Find the mint transaction (from is zero address)
-      const mintTx = tokenTransactions.find(tx => tx.from === "0x0000000000000000000000000000000000000000");
-
-      if (mintTx) {
-        console.log(`Found mint transaction: ${mintTx.hash}`);
-
-        // Get transaction details to find the actual initiator
-        const txDetailUrl = `https://api.polygonscan.com/api?module=proxy&action=eth_getTransactionByHash&txhash=${mintTx.hash}&apikey=${apiKey}`;
-        const txDetailResponse = UrlFetchApp.fetch(txDetailUrl);
-        const txDetailData = JSON.parse(txDetailResponse.getContentText());
-
-        console.log(`Transaction details:`, JSON.stringify(txDetailData, null, 2));
-
-        if (txDetailData.result) {
-          const timestamp = parseInt(mintTx.timeStamp) * 1000;
-          const date = new Date(timestamp);
-          const formattedDate = Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy/MM/dd HH:mm:ss");
-
-          return {
-            mint_date: formattedDate,
-            initiator_address: txDetailData.result.from, // Actual mint initiator's address
-          };
-        }
-      }
+    } catch (error) {
+      console.error(`Error getting transaction details: ${error}`);
+      return { mint_date: "", initiator_address: "" };
     }
-
-    console.log(`No mint transaction found for NFT ID: ${nftId}`);
-    return { mint_date: "", initiator_address: "" };
-  } catch (error) {
-    console.error(`Error getting transaction details: ${error}`);
-    return { mint_date: "", initiator_address: "" };
   }
+
+  // Use cached transactions
+  const transactions = getDirectMintInfoFromPolygonscan.cachedTransactions;
+
+  // Filter transactions for the specific tokenId
+  const tokenTransactions = transactions.filter(tx => tx.tokenID === nftId);
+
+  // Find the mint transaction (from is zero address)
+  const mintTx = tokenTransactions.find(tx => tx.from === "0x0000000000000000000000000000000000000000");
+
+  if (mintTx) {
+    // Get transaction details to find the actual initiator
+    const txDetailUrl = `https://api.polygonscan.com/api?module=proxy&action=eth_getTransactionByHash&txhash=${mintTx.hash}&apikey=${apiKey}`;
+    const txDetailResponse = UrlFetchApp.fetch(txDetailUrl);
+    const txDetailData = JSON.parse(txDetailResponse.getContentText());
+
+    // console.log(`Transaction details:`, JSON.stringify(txDetailData, null, 2));
+
+    if (txDetailData.result) {
+      const timestamp = parseInt(mintTx.timeStamp) * 1000;
+      const date = new Date(timestamp);
+      const formattedDate = Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy/MM/dd HH:mm:ss");
+
+      return {
+        hash: mintTx.hash,
+        mint_date: formattedDate,
+        initiator_address: txDetailData.result.from, // Actual mint initiator's address
+      };
+    }
+  }
+
+  console.log(`No mint transaction found for NFT ID: ${nftId}`);
+  return { mint_date: "", initiator_address: "" };
 }
 
 /**
