@@ -399,10 +399,10 @@ function getExistingRow(sheet, nftId) {
  * @returns {Object} Object containing mint date and initiator address
  */
 function getMintInfoForNFT(nftId) {
-  return getDirectMintInfoFromPolygonscan(nftId);
+  return getDirectMintInfoFromEtherscan(nftId);
 }
 
-function getDirectMintInfoFromPolygonscan(nftId) {
+function getDirectMintInfoFromEtherscan(nftId) {
   const contractAddress = "0x0a77f356cf1de1727145e66c92254881ac3da34b"; // GensoKishiOnline-Polygon (ERC-721)
   const operatorAddresses = [
     "0x801cC71Cad74913f9394806c719C0950b1ec18Ef", // First operator wallet
@@ -412,7 +412,7 @@ function getDirectMintInfoFromPolygonscan(nftId) {
   const apiKey = PropertiesService.getScriptProperties().getProperty("ETHERSCAN_API_KEY");
 
   if (!apiKey) {
-    console.error("Polygonscan API key not found in script properties");
+    console.error("Etherscan API key not found in script properties");
     return { mint_date: "", initiator_address: "" };
   }
 
@@ -428,8 +428,8 @@ function getDirectMintInfoFromPolygonscan(nftId) {
   console.log(`Searching mint info for NFT ID: ${nftId}`);
 
   // Use cached transactions if available
-  if (!getDirectMintInfoFromPolygonscan.cachedTransactions) {
-    getDirectMintInfoFromPolygonscan.cachedTransactions = {};
+  if (!getDirectMintInfoFromEtherscan.cachedTransactions) {
+    getDirectMintInfoFromEtherscan.cachedTransactions = {};
 
     // Fetch transactions for each operator address
     for (const operatorAddress of operatorAddresses) {
@@ -445,7 +445,7 @@ function getDirectMintInfoFromPolygonscan(nftId) {
         if (data.status === "1" && data.result && data.result.length > 0) {
           console.log(`Number of transactions found for ${operatorAddress}: ${data.result.length}`);
           // Cache the transactions for this operator
-          getDirectMintInfoFromPolygonscan.cachedTransactions[operatorAddress] = data.result;
+          getDirectMintInfoFromEtherscan.cachedTransactions[operatorAddress] = data.result;
         } else {
           console.log(`No transactions found in API response for ${operatorAddress}`);
         }
@@ -457,7 +457,7 @@ function getDirectMintInfoFromPolygonscan(nftId) {
 
   // Check transactions from all genso wallets
   for (const operatorAddress of operatorAddresses) {
-    const transactions = getDirectMintInfoFromPolygonscan.cachedTransactions[operatorAddress] || [];
+    const transactions = getDirectMintInfoFromEtherscan.cachedTransactions[operatorAddress] || [];
 
     // Filter transactions for the specific tokenId
     const tokenTransactions = transactions.filter(tx => tx.tokenID === nftId);
@@ -467,7 +467,7 @@ function getDirectMintInfoFromPolygonscan(nftId) {
 
     if (mintTx) {
       // Get transaction details to find the actual initiator
-      const txDetailUrl = `https://api.polygonscan.com/api?module=proxy&action=eth_getTransactionByHash&txhash=${mintTx.hash}&apikey=${apiKey}`;
+      const txDetailUrl = `https://api.etherscan.io/v2/api?chainid=137&module=proxy&action=eth_getTransactionByHash&txhash=${mintTx.hash}&apikey=${apiKey}`;
       const txDetailResponse = UrlFetchApp.fetch(txDetailUrl);
       const txDetailData = JSON.parse(txDetailResponse.getContentText());
 
