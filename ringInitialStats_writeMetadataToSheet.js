@@ -2,16 +2,16 @@
  * Initialize script properties with API keys
  * Run this function once to set up API keys
  */
-function setupAPIKeys() {
-  const scriptProperties = PropertiesService.getScriptProperties();
+// function setupAPIKeys() {
+//   const scriptProperties = PropertiesService.getScriptProperties();
 
-  // Set your API keys here
-  scriptProperties.setProperties({
-    POLYGONSCAN_API_KEY: "MY-POLYGONSCAN-APIKEY",
-  });
+//   // Set your API keys here
+//   scriptProperties.setProperties({
+//     ETHERSCAN_API_KEY: "MY-ETHERSCAN-APIKEY",
+//   });
 
-  Logger.log("API keys setup complete");
-}
+//   Logger.log("API keys setup complete");
+// }
 
 /**
  * Get contract address from script properties
@@ -409,7 +409,7 @@ function getDirectMintInfoFromPolygonscan(nftId) {
     "0x92D882648Bb00D8c364b7A8302BceA0B1A1754Bb", // Second operator wallet
     "0x9Fe58B38D124771664bDAC8866e42aF12785a5C8", // Current operator wallet
   ];
-  const apiKey = PropertiesService.getScriptProperties().getProperty("POLYGONSCAN_API_KEY");
+  const apiKey = PropertiesService.getScriptProperties().getProperty("ETHERSCAN_API_KEY");
 
   if (!apiKey) {
     console.error("Polygonscan API key not found in script properties");
@@ -433,7 +433,7 @@ function getDirectMintInfoFromPolygonscan(nftId) {
 
     // Fetch transactions for each operator address
     for (const operatorAddress of operatorAddresses) {
-      const url = `https://api.polygonscan.com/api?module=account&action=tokennfttx&contractaddress=${contractAddress}&address=${operatorAddress}&page=1&offset=10000&sort=desc&apikey=${apiKey}`;
+      const url = `https://api.etherscan.io/v2/api?chainid=137&module=account&action=tokennfttx&contractaddress=${contractAddress}&address=${operatorAddress}&page=1&offset=10000&sort=desc&apikey=${apiKey}`;
 
       try {
         const response = UrlFetchApp.fetch(url);
